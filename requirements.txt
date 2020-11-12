@@ -1,4 +1,3 @@
 requests
 json
-rae
 beautifulsoup4
