@@ -35,13 +35,16 @@ class SearchEngine:
     def set_with_definitions(self, new_with_definitions):
         self.with_definitions = new_with_definitions
 
-    def search(self, query, sep=None):
+    def search(self, query, sep=None, with_defs=None):
+        if with_defs is None:
+            with_defs = self.with_definitions
+
         if sep is None:
             sep = " "
 
         search_results = self._get_results(query.split(sep))
 
-        if self.with_definitions:
+        if with_defs:
             return list(self.format_word(result) for result in search_results)
         return list(map(lambda x: x["word"], search_results))
 

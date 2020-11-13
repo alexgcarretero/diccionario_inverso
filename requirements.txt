@@ -1,3 +1,5 @@
 requests
-json
+lxml
 beautifulsoup4
+
+telepot
