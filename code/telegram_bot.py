@@ -6,10 +6,10 @@ from telepot.api import set_proxy
 from telepot.loop import MessageLoop
 
 from code.bot import parse_options
-from code.bot.bot_config import ADMIN
-from code.bot.bot_config import SLEEP_TIME
+from code.bot.bot_config import ADMIN, SLEEP_TIME
 from code.cache_manager.manager import CacheManager
 from code.search_engine.search_engine import SearchEngine
+from code.utils import Formatter
 
 
 def _inverse_search(query, chat_id, *args):
@@ -41,10 +41,11 @@ def _show_help(*args):
         "<i>/def on</i>\t:\tActiva la inserción de definiciones en la respuesta.\n"
         "<i>/def off</i>\t:\tDesactiva la inserción de definiciones en la respuesta.\n\n"
         "<b><i>/busca</i></b>\t:\tBusca una palabra en el diccionario de forma normal, "
-        "devolviéndote sus definiciones.\n\n"
+        "devolviéndote sus definiciones.\n"
+        "\t<i>Ejemplo:\t/busca ebúrneo</i>\n\n"
         "<b><i>/palabras</i></b>\t:\tTe responde el número de palabras almacenadas en el sistema.\n\n"
         "<b><i>/definiciones</i></b>\t:\tTe responde el número de definiciones almacenadas en el sistema.\n\n"
-        "<b><i>/contacto</i></b>\t:\tEnvía un mensaje a los administradores del bot para dudas o sugerencias."
+        "<b><i>/contacto</i></b>\t:\tEnvía un mensaje a los administradores del bot para dudas o sugerencias.\n"
         "\t<i>Ejemplo:\t/contacto Muy buenas tardes.</i>\n"
         "\tY le enviará el mensaje 'Muy buenas tardes.' a los administradores\n"
     )
@@ -59,7 +60,7 @@ def _contact_admin(message, chat_id):
 
 
 def _init_chat(text, chat_id, *args):
-    per_chat_context[chat_id] = {"def": False}
+    per_chat_context[chat_id] = {"defs": False}
     return "Bienvenido al bot!\nSi no sabes muy bien qué hacer haz <i>/ayuda</i> para ver qué puedo hacer."
 
 
@@ -67,11 +68,17 @@ def _change_def_per_chat(value, chat_id, *args):
     if value not in ("on", "off"):
         return f"'{value}' no es una opción valida para el comando /def"
     set_value = True if value == "on" else False
-    per_chat_context[chat_id]["def"] = set_value
+    per_chat_context[chat_id]["defs"] = set_value
     return "Configuración establecida."
 
 
 def manage_messages(input_message):
+    def treat_input_query(input_query):
+        content = input_query.split()
+        output_command = content[0]
+        output_query = ' '.join(content[1:])
+        return output_command, Formatter.flatten_text(output_query)
+
     content_type, _, chat_id = glance(input_message)
 
     command_handler = {
@@ -88,14 +95,12 @@ def manage_messages(input_message):
     print(content_type, input_message[content_type], chat_id)
 
     if content_type == "text":
-        content = input_message[content_type].replace(",", " ").split()
-        command = content[0]
-        query = ' '.join(content[1:])
+        command, query = treat_input_query(input_message[content_type])
 
         query_result = command_handler.get(command, lambda *args: "No entiendo ese comando.")(query, chat_id)
-        bot.sendMessage(chat_id, query_result)
+        bot.sendMessage(chat_id, query_result, parse_mode="HTML")
     else:
-        bot.sendMessage(chat_id, "Sólo admito entrada por texto.", parse_mode="HTML")
+        bot.sendMessage(chat_id, "Sólo admito entrada por texto.")
 
 
 if __name__ == "__main__":
@@ -105,7 +110,7 @@ if __name__ == "__main__":
 
     bot = Bot(token)
     cache_manager = CacheManager()
-    search_engine = SearchEngine(cache_manager.definitions)
+    search_engine = SearchEngine(cache_manager.definitions, Formatter("bot"))
     per_chat_context = dict()
 
     print("Bot running...")
