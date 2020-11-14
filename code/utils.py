@@ -47,7 +47,15 @@ def safe_execution(log_message=None, default=None):
 def load_data(file_to_load):
     with open(file_to_load, "r", encoding="utf-8") as f:
         result = json.loads(f.read())
-    return result
+
+    processed_result = dict()
+    for k in result:
+        try:
+            int_k = int(k)
+            processed_result[int_k] = result[k]
+        except ValueError:
+            processed_result[k] = result[k]
+    return processed_result
 
 
 @safe_execution(log_message="Saving data", default=False)
@@ -63,9 +71,14 @@ class Formatter:
     VALID_INTERFACES = {CONSOLE_INTERFACE, BOT_INTERFACE}
 
     @staticmethod
-    def flatten_text(input_text):
-        output_text = input_text.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o")
-        output_text.replace("ú", "u").replace("ü", "u")
+    def flatten_text(input_text, sep=None):
+        if sep is None:
+            sep = " "
+        replacements = [(',', sep), ('á', 'a'), ('é', 'e'), ('í', 'i'), ('ó', 'o'), ('ú', 'u'), ('ü', 'u')]
+
+        output_text = input_text.lower()
+        for char, replacement in replacements:
+            output_text = output_text.replace(char, replacement)
         return output_text
 
     def _setup(self):
@@ -83,7 +96,10 @@ class Formatter:
         self._setup()
 
     @staticmethod
-    def _format_word_console(word, with_defs=True):
+    def _format_word_console(word, with_defs=True, raw=False):
+        if raw:
+            return word if with_defs else word['word']
+
         last_length = len(word['word'])
         formatted_word = f"\n{word['word']}\n{'=' * last_length}\n"
 
@@ -98,14 +114,17 @@ class Formatter:
         return f"{formatted_word}\n{'=' * last_length}\n"
 
     @staticmethod
-    def _format_word_bot(word, with_defs=True):
-        formatted_word = f"<b>{word['word']}</b>\n"
+    def _format_word_bot(word, with_defs=True, raw=False):
+        if raw:
+            return word if with_defs else word['word']
+
+        formatted_content = f"<b>{word['word']}</b>\n"
 
         if not with_defs:
-            return formatted_word
+            return formatted_content
 
         for i, definition in enumerate(word["definitions"], 1):
             formatted_definition = f"<i>{i}.\t{definition}</i>\n"
-            formatted_word += formatted_definition
+            formatted_content += formatted_definition
 
-        return formatted_word
+        return formatted_content

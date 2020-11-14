@@ -1,84 +1,116 @@
 import sys
 from time import sleep
+import signal
+from uuid import uuid4
 
-from telepot import Bot, glance
+from telepot import Bot, glance, message_identifier
+from telepot.exception import TelegramError
 from telepot.api import set_proxy
 from telepot.loop import MessageLoop
 
-from code.bot import parse_options
-from code.bot.bot_config import ADMIN, SLEEP_TIME
+from code.bot import parse_options, inline_keyboard
+from code.bot.stop import stop
+from code.bot.bot_config import ADMIN, SLEEP_TIME, BOT_CONFIG_FILE
 from code.cache_manager.manager import CacheManager
 from code.search_engine.search_engine import SearchEngine
-from code.utils import Formatter
+from code.utils import Formatter, load_data
 
 
-def _inverse_search(query, chat_id, *args):
-    return search_engine.search(query, with_defs=per_chat_context[chat_id]["defs"])
+# Signal Handler
+def signal_handler(sig, frame):
+    stop(bot, settings=chat_context)
+    exit()
 
 
-def _direct_search(query, *args):
-    return search_engine.consult(query)
+# Command functions
+def _handle_inverse_results(inverse_search_results, current_index):
+    word_content = search_engine.consult(inverse_search_results[current_index])
+    keyboard = None
+
+    if (query_length := len(inverse_search_results)) > 1:
+        preview_index = (current_index - 1 + query_length) % query_length
+        next_index = (current_index + 1) % query_length
+
+        preview_word = inverse_search_results[preview_index]
+        next_word = inverse_search_results[next_index]
+
+        keyboard = inline_keyboard({
+            preview_word: f"{current_uuid}:{preview_index}",
+            next_word: f"{current_uuid}:{next_index}"
+        })
+    return word_content, keyboard
 
 
-def _number_of_words(*args):
-    return f"En el sistema hay un total de {cache_manager.number_of_words()} palabras."
+def _inverse_search(chat_id, query):
+    word_results = search_engine.search(query, with_defs=False, raw=True)
+    if chat_id in chat_context:
+        chat_context[chat_id]["/encuentra"]["last_query_result"] = word_results
+    else:
+        chat_context[chat_id] = {"/encuentra": {"last_query_result": word_results, "last_message": None}}
+
+    last_message = chat_context[chat_id]["/encuentra"]["last_message"]
+    try:
+        bot.deleteMessage(message_identifier(last_message))
+    except (TypeError, TelegramError) as e:
+        print(e)
+
+    if len(word_results) == 0:
+        msg = bot.sendMessage(chat_id, "No he encontrado ningún resultado.")
+    else:
+        content, keyboard = _handle_inverse_results(word_results, 0)
+        msg = bot.sendMessage(chat_id, content, parse_mode="HTML", reply_markup=keyboard)
+    chat_context[chat_id]["/encuentra"]["last_message"] = msg
 
 
-def _number_of_definitions(*args):
-    return f"En el sistema hay un total de {cache_manager.number_of_definitions()} palabras."
+def _direct_search(chat_id, query):
+    bot.sendMessage(chat_id, search_engine.consult(query), parse_mode="HTML")
 
 
-def _show_help(*args):
-    return (
-        "<b> Menú de ayuda </b>\n"
-        "Los comandos disponibles son los siguientes:\n"
-        "<b><i>/ayuda</i></b>\t:\tMuestra este menú.\n\n"
-        "<b><i>/encuentra</i></b>\t:\tRealiza una búsqueda inversa en todo el diccionario.\n"
-        "\t<i>Ejemplo:\t/encuentra parecido marfil</i>\n"
-        "\tY entre las respuestas te aparecerá <b>ebúrneo</b>.\n"
-        "\tPor defecto se devuelven <b>SÓLO</b> las palabras coincidentes, sin las definiciones.\n"
-        "\tPara cambiar esto ejecuta el comando <b><i>/def</i></b> de la siguiente forma:\n"
-        "<i>/def on</i>\t:\tActiva la inserción de definiciones en la respuesta.\n"
-        "<i>/def off</i>\t:\tDesactiva la inserción de definiciones en la respuesta.\n\n"
-        "<b><i>/busca</i></b>\t:\tBusca una palabra en el diccionario de forma normal, "
-        "devolviéndote sus definiciones.\n"
-        "\t<i>Ejemplo:\t/busca ebúrneo</i>\n\n"
-        "<b><i>/palabras</i></b>\t:\tTe responde el número de palabras almacenadas en el sistema.\n\n"
-        "<b><i>/definiciones</i></b>\t:\tTe responde el número de definiciones almacenadas en el sistema.\n\n"
-        "<b><i>/contacto</i></b>\t:\tEnvía un mensaje a los administradores del bot para dudas o sugerencias.\n"
-        "\t<i>Ejemplo:\t/contacto Muy buenas tardes.</i>\n"
-        "\tY le enviará el mensaje 'Muy buenas tardes.' a los administradores\n"
-    )
+def _system_statistics(chat_id, query):
+    msg = (
+        f"En el sistema hay un total de <b>{cache_manager.number_of_words()}</b> <i>palabras</i>.\n"
+        f"En el sistema hay un total de <b>{cache_manager.number_of_definitions()}</b> <i>definiciones</i>.\n"
+        f"La letra por la que <b>empiezan más palabras</b> es la <i>{cache_manager.max_words_letter()}</i>.\n"
+        )
+    bot.sendMessage(chat_id, msg, parse_mode="HTML")
 
 
-def _contact_admin(message, chat_id):
+def _show_help(chat_id, query):
+    msg = (
+            "<b> Menú de ayuda </b>\n"
+            "Los comandos disponibles son los siguientes:\n"
+            "<b><i>/ayuda</i></b>\t:\tMuestra este menú.\n\n"
+            "<b><i>/encuentra</i></b>\t:\tRealiza una búsqueda inversa en todo el diccionario.\n"
+            "\t<i>Ejemplo:\t/encuentra parecido marfil</i>\n"
+            "\tY entre las respuestas te aparecerá <b>ebúrneo</b>.\n\n"
+            "<b><i>/busca</i></b>\t:\tBusca una palabra en el diccionario de forma normal, "
+            "devolviéndote sus definiciones.\n"
+            "\t<i>Ejemplo:\t/busca ebúrneo</i>\n\n"
+            "<b><i>/definiciones</i></b>\t:\tTe responde con diversas estadisticas del sistema.\n\n"
+            "<b><i>/contacto</i></b>\t:\tEnvía un mensaje a los administradores del bot para dudas o sugerencias.\n"
+            "\t<i>Ejemplo:\t/contacto Muy buenas tardes.</i>\n"
+            "\tY le enviará el mensaje 'Muy buenas tardes.' a los administradores\n"
+        )
+    bot.sendMessage(chat_id, msg, parse_mode="HTML")
+
+
+def _contact_admin(chat_id, message):
     message_info = f"El usuario con ID '{chat_id}' dice:"
     for admin_id in ADMIN:
         bot.sendMessage(admin_id, message_info)
         bot.sendMessage(admin_id, message)
-    return "Mensaje enviado correctamente a los administradores."
+    msg = "Mensaje enviado correctamente a los administradores."
+    bot.sendMessage(chat_id, msg)
 
 
-def _init_chat(text, chat_id, *args):
-    per_chat_context[chat_id] = {"defs": False}
-    return "Bienvenido al bot!\nSi no sabes muy bien qué hacer haz <i>/ayuda</i> para ver qué puedo hacer."
+def _init_chat(chat_id, query):
+    # chat_context[chat_id] = {"/encuentra": {"last_message": None, "last_query_result": list()}}
+    msg = "Bienvenido al bot!\nSi no sabes muy bien qué hacer haz <i>/ayuda</i> para ver qué puedo hacer."
+    bot.sendMessage(chat_id, msg, parse_mode="HTML")
 
 
-def _change_def_per_chat(value, chat_id, *args):
-    if value not in ("on", "off"):
-        return f"'{value}' no es una opción valida para el comando /def"
-    set_value = True if value == "on" else False
-    per_chat_context[chat_id]["defs"] = set_value
-    return "Configuración establecida."
-
-
+# Chat handle functions
 def manage_messages(input_message):
-    def treat_input_query(input_query):
-        content = input_query.split()
-        output_command = content[0]
-        output_query = ' '.join(content[1:])
-        return output_command, Formatter.flatten_text(output_query)
-
     content_type, _, chat_id = glance(input_message)
 
     command_handler = {
@@ -86,24 +118,39 @@ def manage_messages(input_message):
         "/ayuda": _show_help,
         "/busca": _direct_search,
         "/encuentra": _inverse_search,
-        "/palabras": _number_of_words,
-        "/definiciones": _number_of_definitions,
+        "/estadisticas": _system_statistics,
         "/contacto": _contact_admin,
-        "/def": _change_def_per_chat
     }
 
     print(content_type, input_message[content_type], chat_id)
 
     if content_type == "text":
-        command, query = treat_input_query(input_message[content_type])
-
-        query_result = command_handler.get(command, lambda *args: "No entiendo ese comando.")(query, chat_id)
-        bot.sendMessage(chat_id, query_result, parse_mode="HTML")
+        content = input_message[content_type].split()
+        command = content[0]
+        query = ' '.join(content[1:])
+        command_handler.get(command, lambda *args: "No entiendo ese comando.")(chat_id, query)
     else:
         bot.sendMessage(chat_id, "Sólo admito entrada por texto.")
 
 
+def manage_callback(input_message):
+    query_id, chat_id, query_data = glance(input_message, flavor="callback_query")
+    query_data = query_data.split(":")
+    if query_data[0] != current_uuid:
+        return
+
+    last_query_result = chat_context[chat_id]["/encuentra"]["last_query_result"]
+    last_message = chat_context[chat_id]["/encuentra"]["last_message"]
+
+    current_index = int(query_data[1])
+    content, keyboard = _handle_inverse_results(last_query_result, current_index)
+    bot.editMessageText(message_identifier(last_message), content, parse_mode="HTML", reply_markup=keyboard)
+
+
+# Main
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     token, proxy = parse_options(sys.argv)
     if proxy:
         set_proxy(proxy)
@@ -111,9 +158,11 @@ if __name__ == "__main__":
     bot = Bot(token)
     cache_manager = CacheManager()
     search_engine = SearchEngine(cache_manager.definitions, Formatter("bot"))
-    per_chat_context = dict()
+
+    chat_context = load_data(BOT_CONFIG_FILE)
+    current_uuid = str(uuid4())
 
     print("Bot running...")
-    MessageLoop(bot, {"chat": manage_messages}).run_as_thread()
+    MessageLoop(bot, {"chat": manage_messages, "callback_query": manage_callback}).run_as_thread()
     while True:
         sleep(SLEEP_TIME)

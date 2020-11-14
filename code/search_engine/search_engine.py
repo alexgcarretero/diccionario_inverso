@@ -26,20 +26,18 @@ class SearchEngine:
     def set_with_definitions(self, new_with_definitions):
         self.with_definitions = new_with_definitions
 
-    def search(self, query, sep=None, with_defs=None):
+    def search(self, query, sep=None, with_defs=None, raw=False):
         if with_defs is None:
             with_defs = self.with_definitions
 
         if sep is None:
             sep = " "
 
-        search_results = self._get_results(query.split(sep))
-
-        final_results = ""
-        for result in search_results:
-            final_results += f"{self.formatter.format_word(result, with_defs=with_defs)}\n---\n"
-
-        return final_results
+        query = Formatter.flatten_text(query, sep=sep)
+        return list(
+            self.formatter.format_word(result, with_defs=with_defs, raw=raw)
+            for result in self._get_results(query.split(sep))
+        )
 
     def consult(self, query, sep=None):
         if sep is None:
@@ -56,9 +54,10 @@ class SearchEngine:
 
         for term in search_terms:
             local_results = set()
+            flatted_term = Formatter.flatten_text(term)
             for word in current_results:
                 for definition in word["definitions"]:
-                    if term.lower() in Formatter.flatten_text(definition.lower()):
+                    if flatted_term in Formatter.flatten_text(definition):
                         local_results.add(word)
             current_results.intersection_update(local_results)
         return current_results

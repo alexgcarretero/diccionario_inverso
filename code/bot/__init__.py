@@ -1,5 +1,6 @@
 from getopt import getopt, GetoptError
 from code.bot.bot_config import TOKEN
+from telepot.namedtuple import InlineKeyboardButton, InlineKeyboardMarkup
 
 USAGE = "USAGE:\tpython[3] bot.py [-t TOKEN] [-p PROXY_SERVER]"
 PARSING_SCHEME = "p:t:"
@@ -21,3 +22,13 @@ def parse_options(arguments):
         exit(-1)
 
     return parsed_input["-t"], parsed_input["-p"]
+
+
+def inline_keyboard(*args):
+    keyboard = list()
+    for elements in args:
+        keyboard_row = list()
+        for name, data in elements.items():
+            keyboard_row.append(InlineKeyboardButton(text=name, callback_data=data))
+        keyboard.append(keyboard_row)
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
