@@ -77,7 +77,7 @@ def inverse_search():
                 log("No reconozco ese comando.", level="INFO")
         else:
             print("Resultados:")
-            for result in search_engine.search(query.replace(",", " ")):
+            for result in search_engine.search(query):
                 print(result)
 
 
