@@ -1,6 +1,8 @@
 from getopt import getopt, GetoptError
-from code.bot.bot_config import TOKEN
+
 from telepot.namedtuple import InlineKeyboardButton, InlineKeyboardMarkup
+
+from code.bot.bot_config import TOKEN
 
 USAGE = "USAGE:\tpython[3] bot.py [-t TOKEN] [-p PROXY_SERVER]"
 PARSING_SCHEME = "p:t:"

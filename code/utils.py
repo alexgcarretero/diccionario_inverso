@@ -1,5 +1,6 @@
 import functools
 import json
+from datetime import datetime
 
 from code.cache_manager.API import APIException
 
@@ -21,7 +22,7 @@ def log(message, level="LOG", end=None, start=None, show_log=True):
     if start is None:
         start = ""
 
-    print(f"{start}[{level}]\t{message}", end=end)
+    print(f"{start}[{level}][{datetime.utcnow()}UTC]\t{message}", end=end)
 
 
 def safe_execution(log_message=None, default=None):
