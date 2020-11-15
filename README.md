@@ -10,11 +10,10 @@ Una de estas interfaces (y la recomendada) es un **Bot de Telegram**, disponible
 La otra interfaz es a través de **consola de comandos**, para lo cual se requiere `python3` y `pip3` 
 con las librerias descritas en el archivo `requirements.txt`.
 
-Para una instalación rápida puedes hacer:
+A través del archivo `Makefile` se proveen comandos tales como:
 
-```
-pip3 install -r requirements.txt
-```
+* Instalar las librerias necesarias con `make install`.
+* Lanzar la interfaz de consola con `make consola`.
 
 ## [El bot: @DiccionarioInversoBot](https://t.me/DiccionarioInversoBot)
 La interfaz del bot se compone principalmente de 2 comandos, de los que puedes obtener más información a través del
