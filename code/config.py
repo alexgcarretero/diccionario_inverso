@@ -1,5 +1,5 @@
 # Configs and defaults
-DATA_DIR = "../data"
+DATA_DIR = "data"
 
 WORDS_FILE = f"{DATA_DIR}/palabras.json"
 DEFS_FILE = f"{DATA_DIR}/definiciones.json"

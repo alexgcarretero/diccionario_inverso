@@ -1,4 +1,4 @@
-from code.utils import HashableDict, Formatter
+from utils import HashableDict, Formatter
 
 
 # Where the searching stuff goes on
