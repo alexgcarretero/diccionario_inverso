@@ -16,7 +16,7 @@ class CacheManager:
 
     def __init__(self):
         self.words = self._load_words(show_log=False)
-        self.definitions = self._fetch_definitions(show_log=False)
+        self.definitions = self._load_definitions(show_log=False)
 
     def manage_cache(self, force_words_update=False, force_definitions_update=False):
         if not os.path.exists(WORDS_FILE) or force_words_update:
