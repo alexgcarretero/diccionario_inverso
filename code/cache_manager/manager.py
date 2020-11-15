@@ -157,9 +157,9 @@ class CacheManager:
 
         for count, word in enumerate(self.words[letter]):
             if count % log_counter == 0:
-                log(f"{count} de {total_words}", end=", ", show_log=show_log)
-                definitions = parse_definitions(dict_api.get_definitions(word))
-                letter_definitions[word] = definitions
+                log(f"{count} de {total_words}", show_log=show_log)
+            definitions = parse_definitions(dict_api.get_definitions(word))
+            letter_definitions[word] = definitions
         log(f"Serializando las definiciones de la letra '{letter}'...", start="\n", show_log=show_log)
         save_data(f"{DEFS_DIR}/{letter}.json", letter_definitions)
         return letter_definitions

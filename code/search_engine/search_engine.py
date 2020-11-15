@@ -89,14 +89,12 @@ class SearchEngine:
         Returns:
             set: The results that matches with the search terms.
         """
-        current_results = set(self.definitions.values())
+        search_results = set()
 
-        for term in search_terms:
-            local_results = set()
-            flatted_term = Formatter.flatten_text(term)
-            for word in current_results:
-                for definition in word["definitions"]:
-                    if flatted_term in Formatter.flatten_text(definition):
-                        local_results.add(word)
-            current_results.intersection_update(local_results)
-        return current_results
+        for word in self.definitions.values():
+            for definition in word["definitions"]:
+                flattened_definition = Formatter.flatten_text(definition)
+                if all(Formatter.flatten_text(term) in flattened_definition for term in search_terms):
+                    search_results.add(word)
+                    break
+        return search_results

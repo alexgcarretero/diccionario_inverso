@@ -21,8 +21,9 @@ def parse_definitions(definitions_to_parse):
     """
     definitions = list()
     if definitions_to_parse is not None:
-        soup = BeautifulSoup(definitions_to_parse, "lxml")
+        for definition_to_parse in definitions_to_parse:
+            soup = BeautifulSoup(definition_to_parse, "lxml")
 
-        for definition in soup.find_all("p", attrs={"class": "j"}):
-            definitions.append(definition.text[3:])
+            for definition in soup.find_all("p", attrs={"class": "j"}):
+                definitions.append(definition.text[3:])
     return definitions
