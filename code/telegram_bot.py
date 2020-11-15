@@ -8,7 +8,7 @@ from telepot.api import set_proxy
 from telepot.exception import TelegramError
 from telepot.loop import MessageLoop
 
-from code.bot import parse_options, inline_keyboard
+from code.bot.bot_utils import parse_options, inline_keyboard
 from code.bot.bot_config import ADMIN, SLEEP_TIME, BOT_CONFIG_FILE
 from code.bot.stop import stop
 from code.cache_manager.manager import CacheManager
