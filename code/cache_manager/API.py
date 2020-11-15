@@ -84,7 +84,7 @@ class DictAPI(API):
             word: The word to be search later.
 
         Returns:
-            int: word_id for the word.
+            list: word_ids for the words matching the word searched.
 
         Raises:
             APIException: If the response status code is not 200 OK
@@ -98,17 +98,17 @@ class DictAPI(API):
                 f"Error when searching word '{word}'.\n{search_response[1]}"
             )
 
+        word_ids = list()
         try:
             search_results = json.loads(search_response[1])["res"]
-            word_id = None
             if len(search_results) > 0:
-                word_id = search_results[-1]["id"]
+                word_ids = list(result["id"] for result in search_results if word in result["header"])
         except (KeyError, IndexError) as e:
             raise APIException(
                 500,
                 f"Error when searching word '{word}' index.\n{e}"
             )
-        return word_id
+        return word_ids
 
     def get_definitions(self, word):
         """
@@ -123,15 +123,18 @@ class DictAPI(API):
         Raises:
             APIException: If the response status code is not 200 OK
         """
-        word_id = self._search_word(word)
-        if word_id is None:
+        word_ids = self._search_word(word)
+        if len(word_ids) == 0:
             return None
 
-        params = {"id": word_id}
-        response = self._request(self.fetch_url, params)
-        if response[0] != 200:
-            raise APIException(
-                response[0],
-                f"Error when getting the definitions of word '{word}'.\n{response[1]}"
-            )
-        return response[1]
+        definitions = list()
+        for word_id in word_ids:
+            params = {"id": word_id}
+            response = self._request(self.fetch_url, params)
+            if response[0] != 200:
+                raise APIException(
+                    response[0],
+                    f"Error when getting the definitions of word '{word}'.\n{response[1]}"
+                )
+            definitions.append(response[1])
+        return definitions
