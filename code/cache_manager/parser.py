@@ -1,7 +1,11 @@
+# HTML parsers
 from bs4 import BeautifulSoup
 
 
 def parse_word(words_to_parse):
+    """
+    This function transforms the HTML response of the WordAPI into a word set.
+    """
     words_set = set()
 
     soup = BeautifulSoup(words_to_parse, "lxml")
@@ -12,6 +16,9 @@ def parse_word(words_to_parse):
 
 
 def parse_definitions(definitions_to_parse):
+    """
+    This function transforms the HTML response of the DictAPI into a definition list.
+    """
     definitions = list()
     if definitions_to_parse is not None:
         soup = BeautifulSoup(definitions_to_parse, "lxml")

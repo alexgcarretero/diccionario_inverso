@@ -1,3 +1,4 @@
+# Script that handles unexpected shutdowns as far as possible.
 import sys
 
 from telepot import Bot
@@ -9,6 +10,12 @@ from code.utils import save_data
 
 
 def stop(bot, settings=None):
+    """
+
+    Args:
+        bot (telepot.Bot): A telegram Bot
+        settings(dict, optional): Information that is used by the bot and is wanted to be saved in disk for persistence.
+    """
     if settings:
         save_data(BOT_CONFIG_FILE, settings)
 
