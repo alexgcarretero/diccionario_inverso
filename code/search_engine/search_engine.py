@@ -1,4 +1,4 @@
-from code.utils import HashableDict
+from code.utils import HashableDict, Formatter
 
 
 class SearchEngine:
@@ -15,19 +15,10 @@ class SearchEngine:
                 definition_dict[word] = word_object
         return definition_dict
 
-    @staticmethod
-    def format_word(word):
-        last_length = len(word['word'])
-        formatted_word = f"\n{word['word']}\n{'=' * last_length}\n"
-        for i, definition in enumerate(word["definitions"], 1):
-            formatted_definition = f"{i}\t{definition}\n"
-            last_length = len(formatted_definition)
-            formatted_word += formatted_definition
-        return f"{formatted_word}\n{'=' * last_length}\n"
-
-    def __init__(self, definitions):
+    def __init__(self, definitions, formatter=None):
         self.definitions = self._load_definitions(definitions)
         self.with_definitions = False
+        self.formatter = formatter if formatter is not None else Formatter("console")
 
     def set_definitions(self, new_definitions):
         self.definitions = self._load_definitions(new_definitions)
@@ -35,15 +26,18 @@ class SearchEngine:
     def set_with_definitions(self, new_with_definitions):
         self.with_definitions = new_with_definitions
 
-    def search(self, query, sep=None):
+    def search(self, query, sep=None, with_defs=None, raw=False):
+        if with_defs is None:
+            with_defs = self.with_definitions
+
         if sep is None:
             sep = " "
 
-        search_results = self._get_results(query.split(sep))
-
-        if self.with_definitions:
-            return list(self.format_word(result) for result in search_results)
-        return list(map(lambda x: x["word"], search_results))
+        query = Formatter.flatten_text(query, sep=sep)
+        return list(
+            self.formatter.format_word(result, with_defs=with_defs, raw=raw)
+            for result in self._get_results(query.split(sep))
+        )
 
     def consult(self, query, sep=None):
         if sep is None:
@@ -51,7 +45,7 @@ class SearchEngine:
         query_split = query.split(sep=sep)
         try:
             if len(query_split) == 1:
-                return self.format_word(self.definitions[query])
+                return self.formatter.format_word(self.definitions[query])
         except KeyError:
             return "No encuentro esa palabra."
 
@@ -59,10 +53,11 @@ class SearchEngine:
         current_results = set(self.definitions.values())
 
         for term in search_terms:
-            local_results = {
-                word
-                for word in current_results
-                if any(term.lower() in definition.lower() for definition in word["definitions"])
-            }
+            local_results = set()
+            flatted_term = Formatter.flatten_text(term)
+            for word in current_results:
+                for definition in word["definitions"]:
+                    if flatted_term in Formatter.flatten_text(definition):
+                        local_results.add(word)
             current_results.intersection_update(local_results)
         return current_results

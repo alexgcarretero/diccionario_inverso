@@ -1,3 +1,4 @@
 .idea/*
 venv/*
-
+mac_venv/*
+.DS_Store

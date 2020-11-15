@@ -17,7 +17,6 @@ class CacheManager:
     def __init__(self):
         self.words = self._load_words(show_log=False)
         self.definitions = self._fetch_definitions(show_log=False)
-        self.words_number, self.definitions_number = self._get_numbers()
 
     def manage_cache(self, force_words_update=False, force_definitions_update=False):
         if not os.path.exists(WORDS_FILE) or force_words_update:
@@ -28,19 +27,21 @@ class CacheManager:
             log("Recopilando todas las definiciones del castellano.", level="INFO")
             self.definitions = self._fetch_definitions()
 
-    def _get_numbers(self):
-        words_number = sum(len(words) for words in self.words.values())
-        definitions_number = sum(
-            sum(len(definitions_list) for definitions_list in definitions_dict.values())
-            for definitions_dict in self.definitions.values()
-        )
-        return words_number, definitions_number
+    def number_of_words(self, letter=None):
+        if letter is None:
+            return sum(len(words) for words in self.definitions.values())
+        return len(self.definitions[letter])
 
-    def number_of_words(self):
-        return self.words_number
+    def number_of_definitions(self, letter=None):
+        if letter is None:
+            return sum(
+                sum(len(definitions_list) for definitions_list in definitions_dict.values())
+                for definitions_dict in self.definitions.values()
+            )
+        return sum(len(defs) for defs in self.definitions[letter].values())
 
-    def number_of_definitions(self):
-        return self.definitions_number
+    def max_words_letter(self):
+        return max(self.definitions.keys(), key=lambda letter: self.number_of_words(letter=letter))
 
     # Fetchers
     @staticmethod

@@ -1,5 +1,5 @@
 from code.cache_manager.manager import CacheManager
-from code.search_engine.engine import SearchEngine
+from code.search_engine.search_engine import SearchEngine
 from code.utils import log
 
 # STRING CONSTANTS AND INTERFACE CONFIG
@@ -77,7 +77,7 @@ def inverse_search():
                 log("No reconozco ese comando.", level="INFO")
         else:
             print("Resultados:")
-            for result in search_engine.search(query.replace(",", " ")):
+            for result in search_engine.search(query):
                 print(result)
 
 
