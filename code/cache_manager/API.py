@@ -1,3 +1,4 @@
+# RAE API
 import json
 
 from requests import request
@@ -41,6 +42,18 @@ class WordsAPI(API):
         self.url = "https://www.listapalabras.com/palabras-con.php"
 
     def get_words(self, letter):
+        """
+        This function gathers all the words that start with the letter 'letter'.
+
+        Args:
+            letter: Letter that the words starts with.
+
+        Returns:
+            str: The html page that has all the information of the words list.
+
+        Raises:
+            APIException: If the response status code is not 200 OK
+        """
         if letter.upper() not in self.LETTERS:
             raise APIException(500, f"Letter {letter} not a valid letter.")
 
@@ -64,6 +77,19 @@ class DictAPI(API):
         self.auth_token = "cDY4MkpnaFMzOmFHZlVkQ2lFNDM0"
 
     def _search_word(self, word):
+        """
+        This function prepares the word search, getting the RAE word id.
+
+        Args:
+            word: The word to be search later.
+
+        Returns:
+            int: word_id for the word.
+
+        Raises:
+            APIException: If the response status code is not 200 OK
+            APIException: If the response does not contain the 'id' info for the word
+        """
         params = {"w": word}
         search_response = self._request(self.search_url, params)
         if search_response[0] != 200:
@@ -85,6 +111,18 @@ class DictAPI(API):
         return word_id
 
     def get_definitions(self, word):
+        """
+        This is the word search definition. It gathers all the definitions for the wanted word.
+
+        Args:
+            word: The word to be searched.
+
+        Returns:
+            list: List of definitions for that word.
+
+        Raises:
+            APIException: If the response status code is not 200 OK
+        """
         word_id = self._search_word(word)
         if word_id is None:
             return None

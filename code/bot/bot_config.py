@@ -1,3 +1,4 @@
+# Bot config file
 from code.config import DATA_DIR
 
 # The bot TOKEN

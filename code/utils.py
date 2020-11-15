@@ -6,6 +6,9 @@ from code.cache_manager.API import APIException
 
 
 class HashableDict(dict):
+    """
+    A Hashable dict that is useful for set operations with dicts.
+    """
     def __hash__(self):
         if "word" in self:
             return hash(self["word"])
@@ -13,6 +16,16 @@ class HashableDict(dict):
 
 
 def log(message, level="LOG", end=None, start=None, show_log=True):
+    """
+    Logging function.
+
+    Args:
+        message (str): Message to log.
+        level (str, optional): Level of the Log.
+        end (str, optional): An append for the constructed log message.
+        start (str, optional): An start for the constructed log message.
+        show_log (bool, optional): If false, it wont show the message.
+    """
     if not show_log:
         return
 
@@ -26,6 +39,13 @@ def log(message, level="LOG", end=None, start=None, show_log=True):
 
 
 def safe_execution(log_message=None, default=None):
+    """
+    Decorator that catches the Exceptions of the function to decorate and logs them, preventing system failures.
+
+    Args:
+        log_message (str, optional): An additional log message to show.
+        default: The value to return if an exception occurs.
+    """
     if log_message is None:
         log_message = ""
 
@@ -46,6 +66,16 @@ def safe_execution(log_message=None, default=None):
 
 @safe_execution(log_message="Loading data")
 def load_data(file_to_load):
+    """
+    This function loads the file provided and returns the dict data in it.
+    All the int keys will be transformed into int values.
+
+    Args:
+        file_to_load (str): The file to read the data from.
+
+    Returns:
+        dict: loaded data.
+    """
     with open(file_to_load, "r", encoding="utf-8") as f:
         result = json.loads(f.read())
 
@@ -61,9 +91,18 @@ def load_data(file_to_load):
 
 @safe_execution(log_message="Saving data", default=False)
 def save_data(file_to_save, object_to_serialize):
+    """
+    This function saves the data in the file provided.
+
+    Args:
+        file_to_save (str): The file to write the data.
+        object_to_serialize (dict): The data object.
+
+    Returns:
+        dict: loaded data.
+    """
     with open(file_to_save, "w", encoding="utf-8") as f:
         f.write(json.dumps(object_to_serialize, indent=2, ensure_ascii=False))
-    return True
 
 
 class Formatter:
@@ -73,6 +112,16 @@ class Formatter:
 
     @staticmethod
     def flatten_text(input_text, sep=None):
+        """
+        This function 'flattens' the input text, removing accent marks and lowering it.
+
+        Args:
+            input_text (str): The text to be flattened
+            sep (str): A separator that is going to be the replacement for commas.
+
+        Returns:
+            str: The 'flattened' text.
+        """
         if sep is None:
             sep = " "
         replacements = [(',', sep), ('á', 'a'), ('é', 'e'), ('í', 'i'), ('ó', 'o'), ('ú', 'u'), ('ü', 'u')]
@@ -98,6 +147,7 @@ class Formatter:
 
     @staticmethod
     def _format_word_console(word, with_defs=True, raw=False):
+        # It returns the console format.
         if raw:
             return word if with_defs else word['word']
 
@@ -116,6 +166,7 @@ class Formatter:
 
     @staticmethod
     def _format_word_bot(word, with_defs=True, raw=False):
+        # It returns the bot format
         if raw:
             return word if with_defs else word['word']
 
